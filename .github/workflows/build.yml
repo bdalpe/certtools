@@ -1,0 +1,44 @@
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'infrastructure/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v2.4.0
+        with:
+          node-version: '16'
+          cache: 'yarn'
+
+      - name: Yarn Install
+        run: |
+          yarn install
+
+      - name: Staging Build
+        run: |
+          yarn build
+
+      - name: Unit Tests
+        run: |
+          yarn test
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Copy build to S3
+        run: |
+          aws s3 sync build s3://certtools.thedatalake.io --delete

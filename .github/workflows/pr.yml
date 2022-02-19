@@ -1,0 +1,26 @@
+on: pull_request
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v2.4.0
+        with:
+          node-version: '16'
+          cache: 'yarn'
+
+      - name: Yarn Install
+        run: |
+          yarn install
+
+      - name: Staging Build
+        run: |
+          yarn build
+
+      - name: Unit Tests
+        run: |
+          yarn test
