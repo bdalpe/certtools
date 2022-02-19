@@ -131,6 +131,13 @@ resource "aws_cloudfront_distribution" "cloudfront" {
       restriction_type = "none"
     }
   }
+
+  custom_error_response {
+    error_code = 404
+    error_caching_min_ttl = 300
+    response_code = 200
+    response_page_path = "/index.html"
+  }
 }
 
 // Route53 Records
