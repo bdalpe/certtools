@@ -20,10 +20,7 @@ export class CSR extends React.Component {
             sig: 'sha256WithRSAEncryption',
             altDNSNames: [],
             altIPAddr: [],
-            keys: {
-                private: "",
-                public: ""
-            },
+            privateKey: "",
             showModal: false,
             generating: false
         }
@@ -35,13 +32,14 @@ export class CSR extends React.Component {
         this.setState({...this.state, [field]: value})
     }
 
-    handleClose = () => this.setState({...this.state, showModal: false, csr: undefined, keys: {private: undefined, public: undefined}})
+    handleClose = () => this.setState({...this.state, showModal: false})
 
     decodeCSR(e, state) {
         try {
-            const pki = forge.pki;
+            if (!e.target.value)
+                return;
 
-            let csr = pki.certificationRequestFromPem(e.target.value);
+            let csr = forge.pki.certificationRequestFromPem(e.target.value);
 
             this.setState({
                 ...state,
@@ -49,30 +47,50 @@ export class CSR extends React.Component {
                     ({[e.toLowerCase()]: csr.subject.getField(e)?.value}))
                     .reduce((obj, item) => ({...obj, ...item}), {}),
                 keySize: csr.publicKey.n.bitLength(),
-                sig: pki.oids[csr.siginfo.algorithmOid],
+                sig: forge.pki.oids[csr.siginfo.algorithmOid],
                 altDNSNames: csr.attributes.find(t => t.name === 'extensionRequest')?.extensions
                     .find(t=>t.name === 'subjectAltName')?.altNames?.filter(element =>
                         element.type === 2 && element.value !== csr.subject.getField('CN')?.value)
-                    .map(e => e.value),
+                    .map(e => e.value) || [],
                 altIPAddr: csr.attributes.find(t => t.name === 'extensionRequest')?.extensions
                     .find(t=>t.name === 'subjectAltName')?.altNames?.filter(element =>
                         element.type === 7)
-                    .map(e => e.ip)
+                    .map(e => e.ip) || []
             });
         } catch (e) {
             console.error(e);
         }
     }
 
+    importPrivateKey(e, state) {
+        if (!e.target.value)
+            return;
+
+        this.setState({
+            ...state,
+            privateKey: e.target.value
+        })
+    }
+
+    getKeys = () => {
+        if (this.state.privateKey) {
+            let pk = forge.pki.privateKeyFromPem(this.state.privateKey);
+
+            return {
+                privateKey: pk,
+                publicKey: forge.pki.setRsaPublicKey(pk.n, pk.e)
+            }
+        } else {
+            return forge.pki.rsa.generateKeyPair(this.state.keySize);
+        }
+    }
+
     onFormSubmit(e, state) {
         // Generate the CSR
         try {
-            const pki = forge.pki;
+            const pk = this.getKeys();
 
-            // const pk = state.pk ? pki.privateKeyFromPem(state.pk) : pki.rsa.generateKeyPair(state.keySize);
-            const pk = pki.rsa.generateKeyPair(state.keySize);
-
-            let csr = pki.createCertificationRequest()
+            let csr = forge.pki.createCertificationRequest()
             csr.publicKey = pk.publicKey;
 
             const shortNames = ['CN', 'OU', 'O', 'L', 'ST', 'C']
@@ -123,11 +141,8 @@ export class CSR extends React.Component {
 
             this.setState({
                 ...this.state,
-                keys: {
-                    public: pki.publicKeyToPem(pk.publicKey).trimEnd(),
-                    private: pki.privateKeyToPem(pk.privateKey).trimEnd()
-                },
-                csr: pki.certificationRequestToPem(csr).trimEnd(),
+                privateKey: forge.pki.privateKeyToPem(pk.privateKey).trimEnd(),
+                csr: forge.pki.certificationRequestToPem(csr).trimEnd(),
                 showModal: true
             })
         } catch (e) {
@@ -259,17 +274,15 @@ export class CSR extends React.Component {
                                                     <Form.Control as={"textarea"} rows={20}
                                                                   style={{fontFamily: "monospace"}}
                                                                   placeholder={"Private key..."}
-                                                                  onChange={e => this.setState({
-                                                                      ...this.state,
-                                                                      keys: {private: e.target.value}}
-                                                                  )}
+                                                                  value={this.state.privateKey}
+                                                                  onChange={e => this.importPrivateKey(e, this.state)}
                                                     />
                                                 </Col>
                                                 <Col md={"6"}>
                                                     <Form.Control as={"textarea"} rows={20}
                                                                   style={{fontFamily: "monospace"}}
                                                                   placeholder={"Certificate Signing Request (CSR)..."}
-                                                                  id={"csr"}
+                                                                  value={this.state.csr}
                                                                   onChange={e => this.decodeCSR(e, this.state)}
                                                     />
                                                 </Col>
@@ -293,7 +306,7 @@ export class CSR extends React.Component {
 
                         <br/>
 
-                        {this.state.keys.private?.split('\n').map((item, key) => {
+                        {this.state.privateKey?.split('\n').map((item, key) => {
                           return <span style={{fontFamily: "monospace"}} key={key}>{item}<br/></span>
                         })}
                         </Modal.Body>
