@@ -44,6 +44,7 @@ export class PKDecrypt extends React.Component {
                                               style={{fontFamily: "monospace"}}
                                               placeholder={"Private key..."}
                                               onChange={e => this.setState({...this.state, pk: e.target.value})}
+                                              data-testid={"input"}
                                 />
                             </Row>
                             <Row className={"mt-3"}>
@@ -52,6 +53,7 @@ export class PKDecrypt extends React.Component {
                                                   style={{fontFamily: "monospace"}}
                                                   placeholder={"Passphrase..."}
                                                   onChange={e => this.setState({...this.state, pass: e.target.value})}
+                                                  data-testid={"password"}
                                     />
                                     <Button variant={"primary"} size={"md"} onClick={() => {
                                         this.setState({...this.state, visible: !this.state.visible})
@@ -71,6 +73,7 @@ export class PKDecrypt extends React.Component {
                                               disabled={true}
                                               hidden={!this.state.decrypted}
                                               value={this.state.decrypted}
+                                              data-testid={"output"}
                                 />
                             </Row>
                         </Form>
