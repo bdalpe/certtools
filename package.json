@@ -45,7 +45,7 @@
     ]
   },
   "devDependencies": {
-    "sass": "^1.49.8",
+    "sass": "^1.49.9",
     "typescript": "^4.5.5"
   }
 }
